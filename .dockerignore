@@ -1,0 +1,7 @@
+# Keep the build context small: the image build needs only the Dockerfile, the scripts
+# and the manifest. Everything else (docs, CI, git metadata) is excluded.
+.git
+.github
+*.md
+LICENSE
+scrub-check.sh

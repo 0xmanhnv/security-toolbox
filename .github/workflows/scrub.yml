@@ -1,0 +1,21 @@
+name: scrub-gate
+
+# The safety gate. It must pass before this repository (or its image) may ever be made
+# public: it fails if any file carries a term that would tie this generic image back to
+# a private project. Runs on every push and pull request.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  scrub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run scrub gate
+        run: |
+          chmod +x ./scrub-check.sh
+          ./scrub-check.sh
