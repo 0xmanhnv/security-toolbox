@@ -1,8 +1,9 @@
 # security-toolbox
 
-A container base image with common web and security tooling, a headless browser and two
-non-root sandbox users. It is meant to be used as a base (`FROM`) for a downstream
-application image, which adds its own code and any extra dependencies on top.
+A general-purpose security tooling base image: a container image with common web and
+security tooling, a headless browser and two non-root sandbox users. It is meant to be
+used as a base (`FROM`) for a downstream application image, which adds its own code and
+any extra dependencies on top.
 
 The image bundles only open-source software. It contains **no application code and no
 secrets** — just tools, their dependencies and the users to run them as.
@@ -58,11 +59,14 @@ A downstream image is where application-specific dependencies belong (for exampl
 or Python packages a particular workload needs). This base image deliberately ships only
 the common tooling above.
 
-## Scrub gate
+## Content check
 
-`./scrub-check.sh` is a committed check that scans every file for terms that would tie
-this generic image to any private project it might have been extracted from. It must pass
-with zero hits; CI runs it on every push and pull request.
+`./scrub-check.sh` scans every file for the terms of a denylist and fails on a hit. The
+list is not part of the repository: the script reads it from the environment variable
+`SCRUB_TERMS` (one extended regular expression per line), and CI takes it from the
+repository secret of the same name. Without the variable the script reports that the
+check is skipped and passes on a workstation; in CI it fails, so the check cannot be off
+unnoticed. Actions in the workflows are pinned by commit, with the version in a comment.
 
 ## License & credits
 

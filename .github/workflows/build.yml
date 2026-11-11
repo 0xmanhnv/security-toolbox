@@ -25,15 +25,17 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - name: Scrub gate (must pass before build)
-        run: |
-          chmod +x ./scrub-check.sh
-          ./scrub-check.sh
+      # The content check must pass before anything is built or published. It fails
+      # when the secret is missing (scrub-check.sh).
+      - name: Scrub-check (must pass before build)
+        env:
+          SCRUB_TERMS: ${{ secrets.SCRUB_TERMS }}
+        run: sh ./scrub-check.sh
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       # Publish only on a public repo, and only for a push to the default branch or a tag.
       # On a private repo (this phase) and on pull requests, publish is false: build only.
@@ -49,7 +51,7 @@ jobs:
 
       - name: Log in to GHCR
         if: steps.decide.outputs.publish == 'true'
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -57,7 +59,7 @@ jobs:
 
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         with:
           images: ${{ env.IMAGE }}
           tags: |
@@ -67,7 +69,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build (and publish when public)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: ./Dockerfile

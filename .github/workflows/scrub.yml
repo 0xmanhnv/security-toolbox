@@ -1,8 +1,9 @@
-name: scrub-gate
+name: scrub-check
 
-# The safety gate. It must pass before this repository (or its image) may ever be made
-# public: it fails if any file carries a term that would tie this generic image back to
-# a private project. Runs on every push and pull request.
+# Runs scrub-check.sh on every push and pull request: no file may contain a term from
+# the denylist in the repository secret SCRUB_TERMS (one term per line). The job fails
+# when the secret is missing, so the check is never silently off. Pull requests from
+# forks do not receive secrets and fail here until a maintainer has checked them.
 
 on:
   push:
@@ -10,12 +11,17 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   scrub:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Run scrub gate
-        run: |
-          chmod +x ./scrub-check.sh
-          ./scrub-check.sh
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Run scrub-check
+        env:
+          SCRUB_TERMS: ${{ secrets.SCRUB_TERMS }}
+        run: sh ./scrub-check.sh
