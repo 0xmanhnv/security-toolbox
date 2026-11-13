@@ -18,6 +18,7 @@ binaries and packages inside the image. Thanks to every project and maintainer l
 | sqlmap | sqlmap project | GPL-2.0 | https://github.com/sqlmapproject/sqlmap |
 | jq | jq authors | MIT-style (see repo) | https://github.com/jqlang/jq |
 | ripgrep | Andrew Gallant and contributors | MIT / Unlicense | https://github.com/BurntSushi/ripgrep |
+| jsluice | Bishop Fox | MIT | https://github.com/BishopFox/jsluice |
 
 ## Browser and automation
 

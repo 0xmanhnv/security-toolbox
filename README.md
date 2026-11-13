@@ -21,6 +21,10 @@ secrets** — just tools, their dependencies and the users to run them as.
 - **Scanners & utilities** (pinned release binaries, each verified against the checksum
   published in its own release): nuclei, httpx (the ProjectDiscovery prober), subfinder,
   katana, ffuf, dalfox, sqlmap, jq, ripgrep.
+- **jsluice** — extracts URLs, paths, parameters and secrets from JavaScript files
+  (reading files sends nothing; a URL argument is fetched through `HTTP_PROXY`). It publishes no release builds, so it is
+  built from a pinned module version whose hash is checked against the Go checksum
+  database.
 - **nuclei templates** — one pinned release, pruned to a conservative HTTP-only subset
   (`scripts/nuclei-templates-prune.py`), baked read-only at `/opt/nuclei-templates`. The
   sandbox user's nuclei config points at it, so templates resolve with nothing downloaded.
