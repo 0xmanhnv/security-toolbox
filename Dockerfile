@@ -29,6 +29,14 @@ ARG JQ_VERSION=1.8.2
 ARG RIPGREP_VERSION=15.2.0
 ARG SQLMAP_VERSION=1.10.11
 ARG SQLMAP_COMMIT=6faa9bb929347189a62c046d7d02349140e9933d
+# jsluice has no releases or tags: it is built from a pinned module version (a commit
+# pseudo-version) whose module hash must equal JSLUICE_SUM, the hash the Go checksum
+# database records for it; every dependency is checked against that database too.
+# It parses JavaScript with tree-sitter (cgo), so it is built on the same Debian release
+# as the image.
+ARG JSLUICE_VERSION=v0.0.0-20240110145140-0ddfab153e06
+ARG JSLUICE_SUM=h1:xa/dJgg1qpWdIyr7tQcTV2TUPgBK/f0TTMLMmD5GqjQ=
+ARG GO_BUILD_IMAGE=golang:1.27.3-bookworm
 # nuclei templates: one pinned release, cut down by scripts/nuclei-templates-prune.py to
 # a conservative HTTP-only subset (no intrusive, DoS, fuzzing, brute force, default-login,
 # OSINT/PII, token-spray, OAST or third-party templates). Ship the full set instead by
@@ -93,6 +101,18 @@ ARG NUCLEI_TEMPLATES_VERSION
 COPY scripts/nuclei-templates-prune.py /usr/local/bin/nuclei-templates-prune
 RUN toolbox-fetch nuclei-templates
 
+# jsluice: URLs, paths, parameters and secrets out of JavaScript, read offline from
+# files. Built, not downloaded (see JSLUICE_VERSION above).
+FROM ${GO_BUILD_IMAGE} AS build-jsluice
+ARG JSLUICE_VERSION
+ARG JSLUICE_SUM
+ENV GOFLAGS=-mod=mod GOSUMDB=sum.golang.org GOTOOLCHAIN=local CGO_ENABLED=1
+RUN set -eu; \
+    got="$(go mod download -json "github.com/BishopFox/jsluice@${JSLUICE_VERSION}" | sed -n 's/.*"Sum": "\(.*\)".*/\1/p')"; \
+    [ "$got" = "$JSLUICE_SUM" ] || { echo "jsluice module hash mismatch: want $JSLUICE_SUM got $got" >&2; exit 1; }; \
+    GOBIN=/out/bin go install -trimpath -ldflags='-s' "github.com/BishopFox/jsluice/cmd/jsluice@${JSLUICE_VERSION}"; \
+    /out/bin/jsluice --help >/dev/null 2>&1 || [ $? -le 2 ]
+
 # Everything fetched, laid out as it lands in the image.
 FROM scratch AS tools
 COPY --from=fetch-nuclei /out/bin/ /usr/local/bin/
@@ -103,6 +123,7 @@ COPY --from=fetch-small /out/bin/ /usr/local/bin/
 COPY --from=fetch-sqlmap /out/bin/ /usr/local/bin/
 COPY --from=fetch-sqlmap /out/opt/ /opt/
 COPY --from=fetch-templates /out/opt/ /opt/
+COPY --from=build-jsluice /out/bin/ /usr/local/bin/
 
 # ---------------------------------------------------------------- toolbox ---
 FROM python:3.12-slim-bookworm AS toolbox
@@ -149,7 +170,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # `nuclei -id ...` and `-tags ...` work without -t and nothing is downloaded).
 COPY --link --from=tools / /
 RUN nuclei -version -duc >/dev/null 2>&1 && httpx -version -duc && subfinder -version -duc && katana -version -duc \
-    && ffuf -V >/dev/null && dalfox --version >/dev/null && sqlmap --version >/dev/null && jq --version && rg --version
+    && ffuf -V >/dev/null && dalfox --version >/dev/null && sqlmap --version >/dev/null && jq --version && rg --version \
+    && printf 'fetch("/api/v1/users?id=1")' > /tmp/j.js && jsluice urls /tmp/j.js | grep -q '/api/v1/users' && rm /tmp/j.js
 
 # Browsers live outside root's home so the non-root users find them.
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
